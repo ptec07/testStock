@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Window Compare</title>
+  <meta name="description" content="회사명과 날짜를 입력하면 전후 7일 구간과 1년 전 동일 구간의 주가 흐름을 비교하는 바닐라 JS 웹앱입니다.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232668f2'/%3E%3Cpath d='M14 42 L26 30 L34 36 L50 18' fill='none' stroke='white' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero__glow hero__glow--left"></div>
+      <div class="hero__glow hero__glow--right"></div>
+      <div class="hero__inner">
+        <p class="eyebrow">Vanilla Stock Viewer</p>
+        <h1>주가 구간 비교 대시보드</h1>
+        <p class="hero__desc">
+          회사명과 날짜를 입력하면 기준일 전후 7일의 주가 흐름과
+          1년 전 동일 구간을 한 화면에서 비교할 수 있습니다.
+        </p>
+
+        <div class="hero-tags" aria-label="예시 종목">
+          <span>삼성전자</span>
+          <span>SK하이닉스</span>
+          <span>NAVER</span>
+          <span>AAPL</span>
+          <span>TSLA</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="control-panel card">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Search</p>
+            <h2>종목과 날짜 선택</h2>
+          </div>
+          <p class="section-note">Yahoo Finance 기반 데이터 · 순수 HTML/CSS/JS</p>
+        </div>
+
+        <div class="controls-grid">
+          <div class="field field--company">
+            <label for="company-input">회사명 또는 티커</label>
+            <div class="autocomplete">
+              <input id="company-input" type="text" placeholder="예: 삼성전자, 005930, AAPL, TSLA" autocomplete="off">
+              <ul id="suggestion-list" class="suggestion-list hidden"></ul>
+            </div>
+          </div>
+
+          <div class="field field--date">
+            <label for="date-input">기준 날짜</label>
+            <input id="date-input" type="date">
+          </div>
+
+          <button id="search-btn" class="primary-btn" type="button">비교 보기</button>
+        </div>
+
+        <div class="quick-help-grid">
+          <div class="quick-help">
+            <span>검색 팁</span>
+            <p>한국 주식은 <strong>회사명</strong>, <strong>6자리 종목코드</strong>, <strong>005930.KS</strong> 형식 모두 시도합니다.</p>
+          </div>
+          <div class="quick-help quick-help--soft">
+            <span>키보드</span>
+            <p><strong>Enter</strong> 로 조회, <strong>↑/↓</strong> 로 자동완성 이동, <strong>Esc</strong> 로 자동완성 닫기.</p>
+          </div>
+        </div>
+      </section>
+
+      <div id="status-area" class="status-stack">
+        <div id="loading" class="info-box hidden">
+          <div class="loader"></div>
+          <div>
+            <strong>데이터를 불러오는 중입니다.</strong>
+            <p>선택한 날짜 주변 거래일과 1년 전 동일 구간을 조회하고 있습니다.</p>
+          </div>
+        </div>
+
+        <div id="error-box" class="error-box hidden">
+          <strong>조회 중 문제가 발생했습니다.</strong>
+          <p id="error-msg"></p>
+        </div>
+      </div>
+
+      <section id="results" class="results hidden">
+        <div class="headline-row">
+          <div>
+            <p class="section-kicker">Result</p>
+            <h2 id="result-title">비교 결과</h2>
+          </div>
+          <div id="ticker-pill" class="ticker-pill"></div>
+        </div>
+
+        <div class="market-overview-grid">
+          <article class="overview-card card">
+            <span class="overview-card__label">거래소</span>
+            <strong id="overview-exchange">-</strong>
+            <p id="overview-market-name">-</p>
+          </article>
+          <article class="overview-card card">
+            <span class="overview-card__label">통화</span>
+            <strong id="overview-currency">-</strong>
+            <p id="overview-price-hint">-</p>
+          </article>
+          <article class="overview-card card">
+            <span class="overview-card__label">비교 기준일</span>
+            <strong id="overview-reference-date">-</strong>
+            <p id="overview-previous-date">-</p>
+          </article>
+          <article class="overview-card card">
+            <span class="overview-card__label">거래일 수</span>
+            <strong id="overview-session-count">-</strong>
+            <p>각 구간 실제 거래일 기준</p>
+          </article>
+        </div>
+
+        <div class="summary-grid">
+          <article class="summary-card summary-card--current card">
+            <p class="summary-card__label">선택 날짜 기준 ±7일</p>
+            <h3 id="current-range-label">-</h3>
+            <div class="summary-card__price-row">
+              <div>
+                <span class="mini-label">시작가</span>
+                <strong id="current-start-price">-</strong>
+              </div>
+              <div>
+                <span class="mini-label">종가</span>
+                <strong id="current-end-price">-</strong>
+              </div>
+            </div>
+            <p id="current-change" class="delta-text">-</p>
+          </article>
+
+          <article class="summary-card summary-card--previous card">
+            <p class="summary-card__label">1년 전 동일 구간</p>
+            <h3 id="previous-range-label">-</h3>
+            <div class="summary-card__price-row">
+              <div>
+                <span class="mini-label">시작가</span>
+                <strong id="previous-start-price">-</strong>
+              </div>
+              <div>
+                <span class="mini-label">종가</span>
+                <strong id="previous-end-price">-</strong>
+              </div>
+            </div>
+            <p id="previous-change" class="delta-text">-</p>
+          </article>
+
+          <article class="summary-card summary-card--overlay card">
+            <p class="summary-card__label">비교 포인트</p>
+            <h3>상대 흐름 비교</h3>
+            <div class="insight-list" id="insight-list"></div>
+          </article>
+        </div>
+
+        <div class="charts-grid">
+          <article class="chart-card card">
+            <div class="chart-card__head">
+              <div>
+                <p class="section-kicker">Window A</p>
+                <h3 id="chart-a-title">선택 날짜 기준 ±7일</h3>
+              </div>
+              <div id="chart-a-stats" class="chart-stats"></div>
+            </div>
+            <div class="chart-frame">
+              <svg id="chart-a" class="svg-chart" viewBox="0 0 640 300" preserveAspectRatio="none"></svg>
+            </div>
+          </article>
+
+          <article class="chart-card card">
+            <div class="chart-card__head">
+              <div>
+                <p class="section-kicker">Window B</p>
+                <h3 id="chart-b-title">1년 전 동일 구간</h3>
+              </div>
+              <div id="chart-b-stats" class="chart-stats"></div>
+            </div>
+            <div class="chart-frame">
+              <svg id="chart-b" class="svg-chart" viewBox="0 0 640 300" preserveAspectRatio="none"></svg>
+            </div>
+          </article>
+        </div>
+
+        <article class="overlay-card card">
+          <div class="chart-card__head chart-card__head--stacked">
+            <div>
+              <p class="section-kicker">Overlay</p>
+              <h3>정규화 비교 그래프</h3>
+              <p class="overlay-desc">각 구간의 첫 거래일을 100으로 맞춰 순수한 흐름 차이만 비교합니다.</p>
+            </div>
+            <div class="legend">
+              <span><i class="legend-dot legend-dot--blue"></i>선택 날짜 구간</span>
+              <span><i class="legend-dot legend-dot--gold"></i>1년 전 구간</span>
+            </div>
+          </div>
+          <div class="chart-frame chart-frame--large">
+            <svg id="chart-overlay" class="svg-chart" viewBox="0 0 640 320" preserveAspectRatio="none"></svg>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

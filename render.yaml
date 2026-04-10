@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: stock-window-compare
+    env: python
+    rootDir: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 server.py
+    healthCheckPath: /
+    autoDeploy: true
