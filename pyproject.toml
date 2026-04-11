@@ -1,0 +1,6 @@
+[project]
+name = "stock-window-compare"
+version = "0.1.0"
+description = "Stock comparison app for Vercel deployment"
+requires-python = ">=3.11"
+dependencies = []
